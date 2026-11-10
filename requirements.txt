@@ -1,0 +1,6 @@
+numpy
+scipy
+soundfile
+praat-parselmouth
+kokoro-onnx
+piper-tts
