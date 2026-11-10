@@ -35,7 +35,6 @@ HOOKS = {
 CREDITS = {
     "kokoro": "Kokoro TTS v1.0 (Apache-2.0)",
     "fr_FR-gilles-low": "Piper voice 'gilles' (dataset CC0)",
-    "fr_FR-mls-medium": "Piper voice 'mls' trained on Multilingual LibriSpeech (CC BY 4.0)",
     "fr_FR-siwis-medium": "Piper voice 'siwis' (SIWIS dataset, CC BY 4.0)",
 }
 

@@ -28,9 +28,11 @@ Deux seeds différents donnent deux épisodes différents.
 | Langue | Moteur | Voix | Licence |
 |---|---|---|---|
 | Anglais (15) | Kokoro v1.0 | heart, bella, nicole, aoede, kore, sarah, nova, sky, emma, isabella, michael, fenrir, puck, george, fable | Apache-2.0 |
-| Français (1) | Kokoro v1.0 | siwis | Apache-2.0 |
-| Français (1) | Piper | gilles | données CC0 |
-| Français (13) | Piper MLS | 13 locuteurs sélectionnés automatiquement (intelligibilité mesurée par Whisper) | CC BY 4.0 |
+| Français (13) | Kokoro v1.0 | siwis en 13 timbres : Siwis, Lila (enfant), Zoé, Nina, Rose, Jade, Mila, Léo, Tom, Hugo, Paul, Max, Noé (décalage des formants et de la hauteur) | Apache-2.0 |
+| Français (2) | Piper | gilles (données CC0), siwis-medium (CC BY 4.0) : **narration uniquement** | CC0 / CC BY 4.0 |
+
+Les voix françaises « MLS » de Piper ont été testées puis écartées : elles sont trop peu compréhensibles (vérification par Whisper).
+Les voix Piper ne savent pas prononcer un mot isolé, donc elles ne chantent pas.
 
 **Le chant :** chaque mot est synthétisé, puis recalé sur la mélodie en hauteur et en durée par PSOLA (Praat).
 Les voyelles sont étirées, une légère doublure et de la réverbération sont ajoutées. Les licences CC BY imposent de
@@ -99,7 +101,7 @@ render/core.js       personnages, costumes, fruits, formes, objets, textes
 render/world.js      décors et véhicules
 render/segments.js   rendu de chaque type de chanson et de leçon, karaoké, transitions
 render/render.js     rendu parallèle (Chromium headless) puis ffmpeg
-tools/               classement des voix, aperçus
+tools/               aperçus de rendu, classement de voix
 ```
 
 ## Automatisation (10 vidéos par semaine)
