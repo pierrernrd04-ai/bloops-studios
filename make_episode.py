@@ -109,6 +109,12 @@ def main():
     os.makedirs(out, exist_ok=True)
     t0 = time.time()
     print(f"== {a.lang} seed {a.seed} -> {out}")
+    if os.path.exists(os.path.join(out, "episode.mp4")) and os.path.exists(os.path.join(out, "thumbnail.jpg")):
+        print("   already done")
+        return
+    if all(os.path.exists(os.path.join(out, f)) for f in ("timeline.json", "audio.wav", "metadata.json")):
+        print("   resuming: plan and audio already built")
+        return render(a, out, t0)
     ep = Episode(a.lang, a.seed, target_min=a.minutes)
     tl, audio = ep.build()
     hook = random.Random(a.seed).choice(HOOKS[a.lang])
@@ -120,8 +126,15 @@ def main():
     json.dump(meta, open(os.path.join(out, "metadata.json"), "w"), indent=1, ensure_ascii=False)
     open(os.path.join(out, "description.txt"), "w").write(f"{meta['title']}\n\n{meta['description']}\nTags: {', '.join(meta['tags'])}\n")
     print(f"   plan+audio {tl['duration'] / 60:.1f} min in {time.time() - t0:.0f}s")
+    del ep, audio                      # free several GB before the video render
+    import gc
+    gc.collect()
     if a.no_render:
         return
+    render(a, out, t0)
+
+
+def render(a, out, t0):
     subprocess.run(["node", os.path.join(HERE, "render", "render.js"), out, "--workers", str(a.workers), "--crf", str(a.crf)], check=True)
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", os.path.join(out, "thumb_src.png"), "-vf", "scale=1280:720", "-q:v", "2",
                     os.path.join(out, "thumbnail.jpg")], check=True)

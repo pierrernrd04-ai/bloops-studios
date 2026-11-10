@@ -246,11 +246,12 @@ def reverb(x, spread=0):
 
 
 class Mix:
-    BUSES = ("music", "music_wet", "drums", "voice", "voice_wet", "sfx")
+    """Four stereo buses: music (ducked under speech), music_wet (+reverb, ducked), voice_wet (+reverb), dry."""
+    ALIAS = {"music": "music", "drums": "music", "music_wet": "music_wet", "voice_wet": "voice_wet", "voice": "dry", "sfx": "dry"}
 
     def __init__(self, dur):
         self.n = int((dur + 2.0) * SR)
-        self.bus = {k: np.zeros((2, self.n), np.float32) for k in self.BUSES}
+        self.bus = {k: np.zeros((2, self.n), np.float32) for k in ("music", "music_wet", "voice_wet", "dry")}
 
     def add(self, sig, t0, gain=1.0, pan=0.0, bus="music"):
         i = int(round(t0 * SR))
@@ -262,30 +263,38 @@ class Mix:
             return
         sig = np.asarray(sig[:j - i], np.float32)
         th = (pan + 1) * np.pi / 4
-        self.bus[bus][0, i:j] += sig * gain * np.cos(th)
-        self.bus[bus][1, i:j] += sig * gain * np.sin(th)
+        b = self.bus[self.ALIAS[bus]]
+        b[0, i:j] += sig * np.float32(gain * np.cos(th))
+        b[1, i:j] += sig * np.float32(gain * np.sin(th))
 
-    def render(self, duck_regions=()):
-        music = self.bus["music"] + self.bus["drums"]
-        mw = self.bus["music_wet"]
-        rv = np.stack([reverb(mw[0].astype(np.float64)), reverb(mw[1].astype(np.float64), 23)])
-        music = music + mw + 0.3 * rv
-        # duck music under narration
+    def render(self, duck_regions=(), length=None):
+        n = min(self.n, length or self.n)
+        gain = None
         if duck_regions:
-            g = np.ones(self.n, np.float32)
+            g = np.ones(n, np.float32)
             for a, b in duck_regions:
-                i, j = int(a * SR), int(b * SR)
-                g[max(0, i):min(self.n, j)] = 0.35
-            g = np.convolve(g, np.ones(4410) / 4410, mode="same").astype(np.float32)
-            music *= g
-        vw = self.bus["voice_wet"]
-        vrv = np.stack([reverb(vw[0].astype(np.float64)), reverb(vw[1].astype(np.float64), 17)])
-        voice = self.bus["voice"] + vw + 0.22 * vrv
-        out = music + voice + self.bus["sfx"]
-        out = lfilter([1, -1], [1, -0.995], out, axis=1)
-        peak = np.abs(out).max() + 1e-9
-        out = np.tanh(1.4 * out / peak) / np.tanh(1.4)
-        return (out * 0.92).astype(np.float32)
+                g[max(0, int(a * SR)):max(0, min(n, int(b * SR)))] = 0.35
+            k = 4410
+            c = np.concatenate([[0.0], np.cumsum(g, dtype=np.float64)])
+            idx = np.arange(n)
+            lo, hi = np.clip(idx - k // 2, 0, n), np.clip(idx + k // 2, 0, n)
+            gain = ((c[hi] - c[lo]) / np.maximum(hi - lo, 1)).astype(np.float32)
+            del c, idx, lo, hi, g
+        out = np.zeros((2, n), np.float32)
+        for ch in range(2):
+            mw = self.bus["music_wet"][ch, :n]
+            m = self.bus["music"][ch, :n] + mw + 0.3 * reverb(mw, 23 * ch).astype(np.float32)
+            if gain is not None:
+                m *= gain
+            vw = self.bus["voice_wet"][ch, :n]
+            out[ch] = m + vw + 0.22 * reverb(vw, 17 * ch).astype(np.float32) + self.bus["dry"][ch, :n]
+            del m
+        self.bus = None                      # free the buses
+        out = lfilter([1, -1], [1, -0.995], out, axis=1).astype(np.float32)
+        out *= np.float32(1.4 / (np.abs(out).max() + 1e-9))
+        np.tanh(out, out=out)
+        out *= np.float32(0.92 / np.tanh(1.4))
+        return out
 
 
 class Arranger:

@@ -18,7 +18,7 @@ ep.segments.append(dict(type="end", start=ep.t, end=ep.t + 4)); ep.t += 4
 tl = dict(fps=30, duration=ep.t, lang=lang, seed=seed, narrator=ep.narrator, singers=ep.singers, segments=ep.segments,
           brand=ep.T["title"], ep_title="Preview", ui={"bye": "Bye-bye!"})
 json.dump(tl, open(os.path.join(out, "timeline.json"), "w"))
-sf.write(os.path.join(out, "audio.wav"), ep.mix.render(ep.duck)[:, :int(ep.t * 44100)].T, 44100, subtype="PCM_16")
+sf.write(os.path.join(out, "audio.wav"), ep.mix.render(ep.duck, length=int(ep.t * 44100)).T, 44100, subtype="PCM_16")
 for s in tl["segments"]:
     if s["type"] in ("song", "lesson"):
         v = s.get("verses")

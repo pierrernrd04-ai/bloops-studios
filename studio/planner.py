@@ -315,7 +315,8 @@ class Episode:
         self.mix.add(music.chime_up(), self.t + 0.3, 0.3, 0, "sfx")
         self.t += 4.0
         self.duration = self.t
-        audio = self.mix.render(self.duck)[:, :int(self.duration * SR)]
+        audio = self.mix.render(self.duck, length=int(self.duration * SR))
+        self.mix = None
         tl = dict(fps=30, duration=self.duration, lang=self.lang, seed=self.seed, narrator=self.narrator,
                   singers=self.singers, segments=self.segments, brand=T["title"])
         return tl, audio

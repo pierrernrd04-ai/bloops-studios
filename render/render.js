@@ -24,21 +24,28 @@ function run(cmd, args) {
   return new Promise((res, rej) => { const p = spawn(cmd, args, { stdio: ['ignore', 'inherit', 'inherit'] }); p.on('close', c => c === 0 ? res() : rej(new Error(cmd + ' exited ' + c))); });
 }
 
-async function renderChunk(id, f0, f1, crf, progress) {
+// Resumable rendering: the video is cut into 60 s pieces; finished pieces are kept,
+// so an interrupted render picks up where it stopped.
+const PIECE = 1800;
+async function worker(queue, crf, progress) {
   const browser = await chromium.launch();
   const page = await newPage(browser);
-  const out = path.join(dir, `chunk_${String(id).padStart(2, '0')}.mp4`);
-  const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(tl.fps), '-c:v', 'mjpeg', '-i', '-',
-    '-c:v', 'libx264', '-preset', 'medium', '-crf', String(crf), '-pix_fmt', 'yuv420p', '-g', '60', out], { stdio: ['pipe', 'inherit', 'inherit'] });
-  for (let f = f0; f < f1; f++) {
-    const b64 = await page.evaluate(t => renderFrame(t), f / tl.fps);
-    if (!ff.stdin.write(Buffer.from(b64, 'base64'))) await new Promise(r => ff.stdin.once('drain', r));
-    progress[id] = f - f0 + 1;
+  while (queue.length) {
+    const { k, f0, f1 } = queue.shift();
+    const out = path.join(dir, `piece_${String(k).padStart(3, '0')}.mp4`), part = out.replace('.mp4', '.part.mp4');
+    const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(tl.fps), '-c:v', 'mjpeg', '-i', '-',
+      '-c:v', 'libx264', '-preset', 'medium', '-crf', String(crf), '-pix_fmt', 'yuv420p', '-g', '60', part], { stdio: ['pipe', 'inherit', 'inherit'] });
+    for (let f = f0; f < f1; f++) {
+      const b64 = await page.evaluate(t => renderFrame(t), f / tl.fps);
+      if (!ff.stdin.write(Buffer.from(b64, 'base64'))) await new Promise(r => ff.stdin.once('drain', r));
+      progress.done++;
+    }
+    ff.stdin.end();
+    const code = await new Promise(r => ff.on('close', r));
+    if (code !== 0) throw new Error('ffmpeg failed on piece ' + k);
+    fs.renameSync(part, out);
   }
-  ff.stdin.end();
-  await new Promise(r => ff.on('close', r));
   await browser.close();
-  return out;
 }
 
 (async () => {
@@ -65,15 +72,20 @@ async function renderChunk(id, f0, f1, crf, progress) {
   const workers = parseInt(arg('--workers', '3'));
   const crf = parseInt(arg('--crf', '22'));
   const total = Math.round(tl.duration * tl.fps);
-  const per = Math.ceil(total / workers);
-  const progress = new Array(workers).fill(0);
-  const t0 = Date.now();
+  const pieces = [];
+  for (let k = 0, f = 0; f < total; k++, f += PIECE) pieces.push({ k, f0: f, f1: Math.min(total, f + PIECE) });
+  const name = p => path.join(dir, `piece_${String(p.k).padStart(3, '0')}.mp4`);
+  const todo = pieces.filter(p => !fs.existsSync(name(p)));
+  const progress = { done: total - todo.reduce((s, p) => s + p.f1 - p.f0, 0) };
+  if (todo.length < pieces.length) console.log(`  resuming: ${pieces.length - todo.length}/${pieces.length} pieces already rendered`);
+  const t0 = Date.now(), start = progress.done;
   const timer = setInterval(() => {
-    const done = progress.reduce((a, b) => a + b, 0), el = (Date.now() - t0) / 1000;
-    console.log(`  render ${done}/${total} frames  ${(100 * done / total).toFixed(1)}%  ${el.toFixed(0)}s elapsed, ~${(el / Math.max(done, 1) * (total - done)).toFixed(0)}s left`);
+    const el = (Date.now() - t0) / 1000, rate = (progress.done - start) / Math.max(el, 1);
+    console.log(`  render ${progress.done}/${total} frames  ${(100 * progress.done / total).toFixed(1)}%  ${el.toFixed(0)}s elapsed, ~${((total - progress.done) / Math.max(rate, .1)).toFixed(0)}s left`);
   }, 30000);
-  const chunks = await Promise.all(Array.from({ length: workers }, (_, i) => renderChunk(i, i * per, Math.min(total, (i + 1) * per), crf, progress)));
+  await Promise.all(Array.from({ length: Math.min(workers, todo.length) }, () => worker(todo, crf, progress)));
   clearInterval(timer);
+  const chunks = pieces.map(name);
   const list = path.join(dir, 'chunks.txt');
   fs.writeFileSync(list, chunks.map(c => `file '${path.basename(c)}'`).join('\n'));
   const out = path.join(dir, 'episode.mp4');
