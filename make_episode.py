@@ -29,8 +29,13 @@ LESSON_NAMES = {
     "fr": dict(count="On compte !", find="Trouve la couleur !", shape="Les formes !", animal="Devine l'animal !"),
 }
 HOOKS = {
-    "en": ["Colors, Animals & Fun Songs", "Sing, Dance & Learn", "Count, Sing & Play", "Happy Songs for Kids", "Learn Colors & Numbers"],
-    "fr": ["Couleurs, animaux et chansons", "Chante, danse et apprends", "Compte, chante et joue", "Chansons joyeuses pour enfants", "Apprends les couleurs et les chiffres"],
+    "en": ["Colors, Animals & Fun Songs", "Sing, Dance & Learn", "Count, Sing & Play", "Happy Songs for Kids", "Learn Colors & Numbers",
+           "Wheels, Farms & Lullabies", "Bus Ride Sing-Along", "Fun on the Farm", "Dance Party for Kids", "Shapes, Fruits & Friends",
+           "Sing Along with Bloopy", "Count to Ten with Me", "Rainbow Colors Adventure", "Boats, Trains & Buses", "Bedtime Songs & Fun"],
+    "fr": ["Couleurs, animaux et chansons", "Chante, danse et apprends", "Compte, chante et joue", "Chansons joyeuses pour enfants",
+           "Apprends les couleurs et les chiffres", "En route avec le bus des couleurs", "Une journée à la ferme", "La grande fête de la danse",
+           "Formes, fruits et copains", "Chante avec Bloopy", "Compte jusqu'à dix avec moi", "L'aventure de l'arc-en-ciel",
+           "Bateaux, trains et bus", "Comptines du soir", "Les animaux chantent avec nous"],
 }
 CREDITS = {
     "kokoro": "Kokoro TTS v1.0 (Apache-2.0)",
@@ -101,7 +106,8 @@ def main():
     ap.add_argument("--seed", type=int, required=True)
     ap.add_argument("--minutes", type=float, default=None)
     ap.add_argument("--out", default=None)
-    ap.add_argument("--workers", type=int, default=3)
+    ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--preset", default="veryfast", help="x264 preset (veryfast is ~25%% faster than medium)")
     ap.add_argument("--crf", type=int, default=22)
     ap.add_argument("--no-render", action="store_true")
     a = ap.parse_args()
@@ -114,10 +120,10 @@ def main():
         return
     if all(os.path.exists(os.path.join(out, f)) for f in ("timeline.json", "audio.wav", "metadata.json")):
         print("   resuming: plan and audio already built")
-        return render(a, out, t0)
+        return None if a.no_render else render(a, out, t0)
     ep = Episode(a.lang, a.seed, target_min=a.minutes)
     tl, audio = ep.build()
-    hook = random.Random(a.seed).choice(HOOKS[a.lang])
+    hook = HOOKS[a.lang][a.seed % len(HOOKS[a.lang])]
     tl["ep_title"] = hook
     tl["ui"] = {"bye": "Bye-bye!" if a.lang == "en" else "Au revoir !"}
     json.dump(tl, open(os.path.join(out, "timeline.json"), "w"))
@@ -135,7 +141,8 @@ def main():
 
 
 def render(a, out, t0):
-    subprocess.run(["node", os.path.join(HERE, "render", "render.js"), out, "--workers", str(a.workers), "--crf", str(a.crf)], check=True)
+    subprocess.run(["node", os.path.join(HERE, "render", "render.js"), out, "--workers", str(a.workers), "--crf", str(a.crf),
+                    "--preset", a.preset], check=True)
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", os.path.join(out, "thumb_src.png"), "-vf", "scale=1280:720", "-q:v", "2",
                     os.path.join(out, "thumbnail.jpg")], check=True)
     os.remove(os.path.join(out, "thumb_src.png"))

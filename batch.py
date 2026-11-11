@@ -45,7 +45,7 @@ def main():
     ap.add_argument("--langs", default=None, help="comma list, default alternates en,fr")
     ap.add_argument("--seeds", default=None)
     ap.add_argument("--date", default=None, help="YYYY-MM-DD (default today, UTC)")
-    ap.add_argument("--workers", type=int, default=3)
+    ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--publish", action="store_true")
     a = ap.parse_args()
     day = dt.date.fromisoformat(a.date) if a.date else dt.datetime.utcnow().date()

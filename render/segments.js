@@ -380,11 +380,17 @@ function renderPNG(t) { drawFrame(t); return cv.toDataURL('image/png').split(','
 // ------------------------------------------------------------ thumbnail
 function renderThumb(variant) {
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.filter = 'none';
-  const scenes = ['flowers', 'trees', 'houses', 'farm'], t = 2.0;
-  drawScene(scenes[variant % 4], t, 0, { road: true });
-  drawVehicle('bus', 520, t, { n: 4, seats: [0, 1, 2, 3].map(k => ({ x: 520 - 300 + k * 130 + 52, y: 668, r: 44, color: RAINBOW[k * 2 % 7], mouth: 'open', happyEyes: k % 2 === 0, look: [.5, 0] })), wheelAng: 1 });
-  drawBloop({ x: 1560, y: 800, r: 170, antenna: true, t, mouth: 'open', happyEyes: true, hands: [[-1, .3], [1.1, -.65]] });
-  drawBloop({ x: 1200, y: 870, r: 95, costume: ['cow', 'duck', 'pig', 'frog'][variant % 4], mouth: 'open', t });
+  const v = TL.seed || variant, t = 2.0 + (v % 7);
+  const scenes = ['flowers', 'trees', 'houses', 'farm', 'pines', 'snow'], sc = scenes[v % scenes.length];
+  const veh = ['bus', 'train', 'bus', 'boat'][Math.floor(v / 6) % 4];
+  drawScene(veh === 'boat' ? 'sea' : sc, t, 0, { road: veh === 'bus' });
+  if (veh === 'train') rails(0, SCENE_PAL[sc] || SCENE_PAL.trees);
+  const cols = [0, 1, 2, 3].map(k => RAINBOW[(k * 2 + v) % 7]);
+  if (veh === 'boat') drawVehicle('boat', 600, t, { n: 4, seats: cols.map((c, k) => ({ x: 300 + k * 187, y: 622, r: 52, color: c, mouth: 'open', happyEyes: k % 2 === 0 })) });
+  else { const gm = vehicleGeom(veh, veh === 'train' ? 560 : 520, 4); drawVehicle(veh, veh === 'train' ? 560 : 520, t, { n: 4, seats: cols.map((c, k) => ({ x: gm.seats[k][0], y: veh === 'train' ? 683 : 668, r: 44, color: c, mouth: 'open', happyEyes: k % 2 === 0, look: [.5, 0] })), wheelAng: 1 }); }
+  const right = veh === 'train' ? 1700 : 1560;
+  drawBloop({ x: right, y: 800, r: 170, antenna: true, t, mouth: 'open', happyEyes: v % 2 === 0, hands: [[-1, .3], [1.1, -.65]] });
+  drawBloop({ x: right - 360, y: 870, r: 95, costume: ['cow', 'duck', 'pig', 'frog', 'cat', 'dog', 'sheep', 'hen'][v % 8], mouth: 'open', t });
   const words = (TL.ep_title || 'Fun Songs').toUpperCase().split(' ');
   const mid = Math.ceil(words.length / 2), l1 = words.slice(0, mid).join(' '), l2 = words.slice(mid).join(' ');
   const s1 = fitSize(l1, 150, 1750), s2 = fitSize(l2, 150, 1750);

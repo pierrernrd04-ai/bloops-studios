@@ -26,7 +26,8 @@ function run(cmd, args) {
 
 // Resumable rendering: the video is cut into 60 s pieces; finished pieces are kept,
 // so an interrupted render picks up where it stopped.
-const PIECE = 1800;
+const PIECE = parseInt(arg('--piece', '1800'));
+const PRESET = arg('--preset', 'medium');
 async function worker(queue, crf, progress) {
   const browser = await chromium.launch();
   const page = await newPage(browser);
@@ -34,7 +35,7 @@ async function worker(queue, crf, progress) {
     const { k, f0, f1 } = queue.shift();
     const out = path.join(dir, `piece_${String(k).padStart(3, '0')}.mp4`), part = out.replace('.mp4', '.part.mp4');
     const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', String(tl.fps), '-c:v', 'mjpeg', '-i', '-',
-      '-c:v', 'libx264', '-preset', 'medium', '-crf', String(crf), '-pix_fmt', 'yuv420p', '-g', '60', part], { stdio: ['pipe', 'inherit', 'inherit'] });
+      '-c:v', 'libx264', '-preset', PRESET, '-crf', String(crf), '-pix_fmt', 'yuv420p', '-g', '60', part], { stdio: ['pipe', 'inherit', 'inherit'] });
     for (let f = f0; f < f1; f++) {
       const b64 = await page.evaluate(t => renderFrame(t), f / tl.fps);
       if (!ff.stdin.write(Buffer.from(b64, 'base64'))) await new Promise(r => ff.stdin.once('drain', r));
