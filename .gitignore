@@ -4,3 +4,4 @@ ep01/
 __pycache__/
 *.pyc
 node_modules/
+*.bundle
