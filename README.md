@@ -121,3 +121,17 @@ Pour produire un gros lot d'un coup (reprise automatique après coupure) :
 ```bash
 python3 tools/produce.py --en 1001-1015 --fr 2001-2015
 ```
+
+## Courts formats (TikTok, YouTube Shorts, YouTube)
+
+```bash
+python3 tools/shorts.py out/en-1001        # 2 courts formats pour cet épisode
+python3 tools/shorts.py --all --count 2    # tous les épisodes terminés
+```
+
+Chaque court format dure **de 2 min à 2 min 58** : plus de 2 minutes, et sous la limite de 3 minutes des YouTube Shorts.
+Il est produit en deux versions, dans `out/<épisode>/shorts/` :
+
+- `short_N_vertical.mp4` : 1080×1920, avec la marque et le titre en haut et un fond flouté, pour **TikTok** et **YouTube Shorts** ;
+- `short_N_youtube.mp4` : le même extrait en 16:9, pour YouTube classique ;
+- `short_N.txt` : le titre, la légende et les hashtags.
