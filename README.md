@@ -106,12 +106,18 @@ tools/               aperçus de rendu, classement de voix
 
 ## Automatisation (10 vidéos par semaine)
 
-Une tâche planifiée Claude Code se lance **du lundi au vendredi à 2 h 17 (heure de Paris)**. À chaque fois, elle :
+Une tâche planifiée Claude Code se lance **du lundi au vendredi à 2 h 17 (heure de Paris)**. Chaque session :
 
 1. clone ce dépôt et lance `./setup.sh` ;
-2. exécute `python3 batch.py --count 2 --publish`, ce qui produit **1 épisode en anglais et 1 en français** ;
-3. publie les vidéos, les miniatures et les descriptions dans une **Release GitHub** nommée `episodes-AAAA-MM-JJ`.
+2. exécute `python3 batch.py --count 2`, soit **1 épisode anglais + 1 français** ;
+3. **t'envoie les vidéos, les miniatures et les descriptions dans l'appli Claude**, avec une notification.
 
-Cela fait 5 épisodes en anglais et 5 en français par semaine, à télécharger depuis l'onglet *Releases* du dépôt.
-Tu les regardes, puis tu les mets en ligne sur YouTube. Avant de publier, garde toujours un contrôle humain :
-c'est ce qui protège la monétisation.
+Cela fait 5 épisodes en anglais et 5 en français par semaine. Une session Claude ne peut pas créer de Release GitHub
+(erreur 403) : les vidéos arrivent donc dans l'appli. `batch.py --publish` reste utilisable depuis ton ordinateur avec `gh`.
+Regarde chaque épisode avant de le mettre en ligne : ce contrôle humain protège la monétisation.
+
+Pour produire un gros lot d'un coup (reprise automatique après coupure) :
+
+```bash
+python3 tools/produce.py --en 1001-1015 --fr 2001-2015
+```
