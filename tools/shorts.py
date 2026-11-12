@@ -72,40 +72,48 @@ def pick(cands, count):
     return sorted(chosen, key=lambda c: c["start"])
 
 
-def make_short(ep_dir, tl, w, n):
-    sd = os.path.join(ep_dir, "shorts")
+def vertical(ep_dir, tl, start, dur, title, out, tag):
+    """Render a 1080x1920 clip of the episode with brand, title and call to action on top."""
+    sd = os.path.dirname(out)
     os.makedirs(sd, exist_ok=True)
     lang = tl["lang"]
-    dur = w["end"] - w["start"]
-    lines = textwrap.wrap(w["title"], 18)[:2]
+    lines = textwrap.wrap(title, 18)[:2]
     for k, line in enumerate(lines):
-        open(os.path.join(sd, f".t{n}_{k}.txt"), "w").write(line)
-    open(os.path.join(sd, f".b{n}.txt"), "w").write(tl["brand"])
-    open(os.path.join(sd, f".c{n}.txt"), "w").write(CTA[lang])
+        open(os.path.join(sd, f".t{tag}_{k}.txt"), "w").write(line)
+    open(os.path.join(sd, f".b{tag}.txt"), "w").write(tl["brand"])
+    open(os.path.join(sd, f".c{tag}.txt"), "w").write(CTA[lang])
     esc = lambda p: p.replace(":", "\\:")
     y0 = 300 if len(lines) == 2 else 360
-    draw = [f"drawtext=fontfile={FONT}:textfile={esc(os.path.join(sd, f'.b{n}.txt'))}:fontsize=58:fontcolor=white:"
+    draw = [f"drawtext=fontfile={FONT}:textfile={esc(os.path.join(sd, f'.b{tag}.txt'))}:fontsize=58:fontcolor=white:"
             f"box=1:boxcolor=0x7B4FE0:boxborderw=22:x=(w-tw)/2:y=170"]
     for k in range(len(lines)):
-        draw.append(f"drawtext=fontfile={FONT}:textfile={esc(os.path.join(sd, f'.t{n}_{k}.txt'))}:fontsize=96:fontcolor=white:"
+        draw.append(f"drawtext=fontfile={FONT}:textfile={esc(os.path.join(sd, f'.t{tag}_{k}.txt'))}:fontsize=96:fontcolor=white:"
                     f"borderw=12:bordercolor=0xFF4B4B:x=(w-tw)/2:y={y0 + k * 118}")
-    draw.append(f"drawtext=fontfile={FONT}:textfile={esc(os.path.join(sd, f'.c{n}.txt'))}:fontsize=70:fontcolor=0xFFE066:"
+    draw.append(f"drawtext=fontfile={FONT}:textfile={esc(os.path.join(sd, f'.c{tag}.txt'))}:fontsize=70:fontcolor=0xFFE066:"
                 f"borderw=10:bordercolor=0x3D2A8A:x=(w-tw)/2:y=1470")
     fade_out = max(0.0, dur - 0.8)
-    vf = (f"[0:v]split=2[a][b];[a]scale=-2:1920,crop=1080:1920,boxblur=28:4,eq=brightness=-0.10:saturation=1.25[bg];"
+    vf = (f"[0:v]split=2[a][b];[a]scale=-2:480,crop=270:480,boxblur=7:2,scale=1080:1920,eq=brightness=-0.10:saturation=1.25[bg];"
           f"[b]scale=1080:-2[fg];[bg][fg]overlay=0:(H-h)/2+20," + ",".join(draw) +
           f",fade=t=in:st=0:d=0.3,fade=t=out:st={fade_out:.2f}:d=0.8[v];"
           f"[0:a]afade=t=in:st=0:d=0.3,afade=t=out:st={fade_out:.2f}:d=0.8[a2]")
-    vert = os.path.join(sd, f"short_{n}_vertical.mp4")
-    subprocess.run(["nice", "-n", "15", "ffmpeg", "-y", "-loglevel", "error", "-ss", f"{w['start']:.2f}", "-t", f"{dur:.2f}",
+    tmp = out + ".part.mp4"
+    subprocess.run(["nice", "-n", "15", "ffmpeg", "-y", "-loglevel", "error", "-ss", f"{start:.2f}", "-t", f"{dur:.2f}",
                     "-i", os.path.join(ep_dir, "episode.mp4"), "-filter_complex", vf, "-map", "[v]", "-map", "[a2]",
                     "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p", "-r", "30",
-                    "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", vert], check=True)
+                    "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", tmp], check=True)
+    os.replace(tmp, out)
+    for f in glob.glob(os.path.join(sd, f".[tbc]{tag}*.txt")):
+        os.remove(f)
+
+
+def make_short(ep_dir, tl, w, n):
+    sd = os.path.join(ep_dir, "shorts")
+    lang = tl["lang"]
+    dur = w["end"] - w["start"]
+    vertical(ep_dir, tl, w["start"], dur, w["title"], os.path.join(sd, f"short_{n}_vertical.mp4"), str(n))
     yt = os.path.join(sd, f"short_{n}_youtube.mp4")
     subprocess.run(["nice", "-n", "15", "ffmpeg", "-y", "-loglevel", "error", "-ss", f"{w['start']:.2f}", "-t", f"{dur:.2f}",
                     "-i", os.path.join(ep_dir, "episode.mp4"), "-c", "copy", "-movflags", "+faststart", yt], check=True)
-    for f in glob.glob(os.path.join(sd, ".*.txt")):
-        os.remove(f)
     if lang == "en":
         title = f"{w['title']} | {tl['brand']} Nursery Rhymes & Kids Songs"
         cap = f"{w['title']} 🎵 Sing, dance and learn with Bloopy and the Bloops! Sing-along lyrics on screen."

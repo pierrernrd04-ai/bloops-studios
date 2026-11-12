@@ -135,3 +135,18 @@ Il est produit en deux versions, dans `out/<épisode>/shorts/` :
 - `short_N_vertical.mp4` : 1080×1920, avec la marque et le titre en haut et un fond flouté, pour **TikTok** et **YouTube Shorts** ;
 - `short_N_youtube.mp4` : le même extrait en 16:9, pour YouTube classique ;
 - `short_N.txt` : le titre, la légende et les hashtags.
+
+## Extraits TikTok de 1 min 30
+
+```bash
+python3 tools/tiktok.py --all             # un extrait par épisode terminé, chansons variées d'un épisode à l'autre
+python3 tools/tiktok.py out/en-1001       # un seul épisode
+python3 tools/tiktok.py --all --plan      # affiche le choix des chansons sans rien rendre
+```
+
+Chaque extrait dure **exactement 1 min 30** (plus d'1 minute, comme l'exige le programme de rémunération de TikTok).
+Il commence sur l'annonce d'une chanson par Bloopy et évite les chansons déjà prises par les courts formats du même épisode.
+Il est écrit dans `out/<épisode>/tiktok/` :
+
+- `<épisode>_tiktok_90s.mp4` : 1080×1920, marque et titre en haut, fond flouté ;
+- `<épisode>_tiktok.txt` : la légende (écrite pour les parents, TikTok étant réservé aux plus de 13 ans) et les hashtags.
