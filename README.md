@@ -150,3 +150,12 @@ Il est écrit dans `out/<épisode>/tiktok/` :
 
 - `<épisode>_tiktok_90s.mp4` : 1080×1920, marque et titre en haut, fond flouté ;
 - `<épisode>_tiktok.txt` : la légende (écrite pour les parents, TikTok étant réservé aux plus de 13 ans) et les hashtags.
+
+## Miniatures des extraits TikTok
+
+```bash
+python3 tools/covers.py --all      # une miniature verticale 1080×1920 par extrait (après tools/tiktok.py)
+```
+
+Chaque miniature (`out/<épisode>/tiktok/<épisode>_tiktok_cover.jpg`) montre la scène de la chanson en entier sur un fond flouté,
+la marque, le titre en grand et un badge « 1:30 ». Elle sert de couverture sur TikTok et sur YouTube Shorts.
