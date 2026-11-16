@@ -8,3 +8,7 @@ et le bouton « Enregistrer la vidéo » télécharge les morceaux, les recolle 
 
 - `vault_tpl.html` : la page ; `vault_build.py N` : construit la page du lot N ;
   `add_assets.py N` : enregistre les adresses renvoyées par l'envoi des morceaux.
+
+Attention : le serveur refuse un morceau dont le premier octet est « < » (il le prend pour du balisage).
+Dans ce cas, allonger le morceau précédent de 64 Ko (il reste sous 20 Mio) et raccourcir d'autant le morceau refusé :
+le fichier recollé reste identique à l'original.
